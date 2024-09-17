@@ -96,7 +96,7 @@ const InfoModal: React.FC<chatInfoMessage> = ({ sources, model, total_tokens, re
       <Box className='flex flex-row pb-6 items-center mb-2'>
         <img src={Neo4jRetrievalLogo} style={{ width: 95, height: 95, marginRight: 10 }} loading='lazy' />
         <Box className='flex flex-col'>
-          <Typography variant='h2'>Retrieval information</Typography>
+          <Typography variant='h2'>InfoModal Retrieval information</Typography>
           <Typography variant='body-medium' className='mb-2'>
             To generate this response, in <span className='font-bold'>{response_time} seconds</span> we used{' '}
             <span className='font-bold'>{total_tokens}</span> tokens with the model{' '}

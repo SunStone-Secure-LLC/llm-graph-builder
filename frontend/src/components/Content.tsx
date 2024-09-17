@@ -105,7 +105,7 @@ const Content: React.FC<ContentProps> = ({
           userName: neo4jConnection.user,
           password: neo4jConnection.password,
           database: neo4jConnection.database,
-          port: neo4jConnection.uri.split(':')[2],
+          //FIXME: aura neo doesn't have a port - port: neo4jConnection.uri.split(':')[2],
         });
       } else {
         setOpenConnection(true);
@@ -283,9 +283,11 @@ const Content: React.FC<ContentProps> = ({
   const handleOpenGraphClick = () => {
     const bloomUrl = process.env.BLOOM_URL;
     const uriCoded = userCredentials?.uri.replace(/:\d+$/, '');
-    const connectURL = `${uriCoded?.split('//')[0]}//${userCredentials?.userName}@${uriCoded?.split('//')[1]}:${
-      userCredentials?.port ?? '7687'
-    }`;
+    // FIXME: port is not needed for Aura hosted Neo
+    //const connectURL = `${uriCoded?.split('//')[0]}//${userCredentials?.userName}@${uriCoded?.split('//')[1]}:${
+    //  userCredentials?.port ?? '7687'
+    //}`;
+    const connectURL = `${uriCoded?.split('//')[0]}//${userCredentials?.userName}@${uriCoded?.split('//')[1]}`;
     const encodedURL = encodeURIComponent(connectURL);
     const replacedUrl = bloomUrl?.replace('{CONNECT_URL}', encodedURL);
     window.open(replacedUrl, '_blank');

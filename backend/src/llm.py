@@ -139,13 +139,22 @@ def get_combined_chunks(chunkId_chunkDoc_list):
         )
     return combined_chunk_document_list
 
-
+""" 
+Extracting graph data from text enables the transformation of unstructured 
+information into structured formats, facilitating deeper insights and more 
+efficient navigation through complex relationships and patterns. The 
+LLMGraphTransformer converts text documents into structured graph documents 
+by leveraging a LLM to parse and categorize entities and their relationships. 
+The selection of the LLM model significantly influences the output by 
+determining the accuracy and nuance of the extracted graph data.
+"""
 def get_graph_document_list(
     llm, combined_chunk_document_list, allowedNodes, allowedRelationship
 ):
     futures = []
     graph_document_list = []
-    if llm.get_name() == "ChatOllama":
+
+    if hasattr(llm, 'get_name') and llm.get_name() == "ChatOllama":
         node_properties = False
     else:
         node_properties = ["description"]

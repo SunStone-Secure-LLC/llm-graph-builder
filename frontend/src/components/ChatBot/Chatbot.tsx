@@ -332,8 +332,8 @@ const Chatbot: React.FC<ChatbotProps> = (props) => {
                           fill='text'
                           placement='top'
                           clean
-                          text='Retrieval Information'
-                          label='Retrieval Information'
+                          text='ChatBot Retrieval Information'
+                          label='ChatBot Retrieval Information'
                           disabled={chat.isTyping || chat.isLoading}
                           onClick={() => {
                             setModelModal(chat.model ?? '');

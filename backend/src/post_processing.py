@@ -62,6 +62,7 @@ def create_fulltext(uri, username, password, database):
         
 def create_entity_embedding(graph:Neo4jGraph):
     rows = fetch_entities_for_embedding(graph)
+    logging.info(f"fetch_entities_for_embedding: {len(rows)}")
     for i in range(0, len(rows), 1000):
         update_embeddings(rows[i:i+1000],graph)
             

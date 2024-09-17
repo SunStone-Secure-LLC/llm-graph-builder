@@ -94,7 +94,7 @@ class graphDBdataAccess:
 
             param= {"props":params}
             
-            print(f'Base Param value 1 : {param}')
+            logging.info(f'Base Param value 1 : {param}')
             query = "MERGE(d:Document {fileName :$props.fileName}) SET d += $props"
             logging.info("Update source node properties")
             self.graph.query(query,param)
@@ -121,7 +121,46 @@ class graphDBdataAccess:
         result = self.graph.query(query)
         list_of_json_objects = [entry['d'] for entry in result]
         return list_of_json_objects
+
+    # WIP - get list of nodes to link for red team paths
+    def get_redteam_nodes_list(self):
+        score_value = float(os.environ.get('DUPLICATE_SCORE_VALUE'))
+        text_distance = int(os.environ.get('DUPLICATE_TEXT_DISTANCE'))
+        query_redteam_nodes = """
+                TODO
+                """
+        return_query_redteam_nodes = """
+                TODO
+                """
+        return_query_redteam_nodes_total = "RETURN COUNT(DISTINCT(n)) as total"
         
+        param = {"duplicate_score_value": score_value, "duplicate_text_distance" : text_distance}
+        
+        nodes_list = self.execute_query(query_redteam_nodes.format(return_statement=return_query_redteam_nodes_total),param=param)
+        total_nodes = self.execute_query(query_redteam_nodes.format(return_statement=return_query_redteam_nodes_total),param=param)
+        return nodes_list, total_nodes[0]
+
+    # WIP - add relationship for red team paths
+    def link_redteam_nodes(self,linked_nodes_list):
+        """
+        Update the graph node with ATTACK relationship where ....
+        """
+        index = self.graph.query("""show indexes yield * where type = 'VECTOR' and name = 'vector'""")
+        # logging.info(f'show index vector: {index}')
+        knn_min_score = os.environ.get('KNN_MIN_SCORE')
+        if len(index) > 0:
+            logging.info('begin update KNN graph')
+            self.graph.query("""MATCH (c:Chunk)
+                                    WHERE c.embedding IS NOT NULL AND count { (c)-[:SIMILAR]-() } < 5
+                                    CALL db.index.vector.queryNodes('vector', 6, c.embedding) yield node, score
+                                    WHERE node <> c and score >= $score MERGE (c)-[rel:SIMILAR]-(node) SET rel.score = score
+                                """,
+                                {"score":float(knn_min_score)}
+                                )
+            logging.info('COMPLETED update KNN graph')
+        else:
+            logging.info("Vector index does not exist, So KNN graph not update")
+
     def update_KNN_graph(self):
         """
         Update the graph node with SIMILAR relationship where embedding scrore match
@@ -130,7 +169,7 @@ class graphDBdataAccess:
         # logging.info(f'show index vector: {index}')
         knn_min_score = os.environ.get('KNN_MIN_SCORE')
         if len(index) > 0:
-            logging.info('update KNN graph')
+            logging.info('begin update KNN graph')
             self.graph.query("""MATCH (c:Chunk)
                                     WHERE c.embedding IS NOT NULL AND count { (c)-[:SIMILAR]-() } < 5
                                     CALL db.index.vector.queryNodes('vector', 6, c.embedding) yield node, score
@@ -138,6 +177,7 @@ class graphDBdataAccess:
                                 """,
                                 {"score":float(knn_min_score)}
                                 )
+            logging.info('COMPLETED update KNN graph')
         else:
             logging.info("Vector index does not exist, So KNN graph not update")
             
@@ -257,6 +297,55 @@ class graphDBdataAccess:
         param = {"elementIds":entities_list}
         return self.execute_query(query,param)
     
+        # RF: REVIEW: NOT SURE WHATS GOING ON HERE...
+        score_value = float(os.environ.get('DUPLICATE_SCORE_VALUE'))
+        text_distance = int(os.environ.get('DUPLICATE_TEXT_DISTANCE'))
+        query_duplicate_nodes = """
+                MATCH (n:!Chunk&!Document) with n 
+                WHERE n.embedding is not null and n.id is not null // and size(n.id) > 3
+                WITH n ORDER BY count {{ (n)--() }} DESC, size(n.id) DESC // updated
+                WITH collect(n) as nodes
+                UNWIND nodes as n
+                WITH n, [other in nodes 
+                // only one pair, same labels e.g. Person with Person
+                WHERE elementId(n) < elementId(other) and labels(n) = labels(other)
+                // at least embedding similarity of X
+                AND 
+                (
+                // either contains each other as substrings or has a text edit distinct of less than 3
+                (size(other.id) > 2 AND toLower(n.id) CONTAINS toLower(other.id)) OR 
+                (size(n.id) > 2 AND toLower(other.id) CONTAINS toLower(n.id))
+                OR (size(n.id)>5 AND apoc.text.distance(toLower(n.id), toLower(other.id)) < $duplicate_text_distance)
+                OR
+                vector.similarity.cosine(other.embedding, n.embedding) > $duplicate_score_value
+                )] as similar
+                WHERE size(similar) > 0 
+                // remove duplicate subsets
+                with collect([n]+similar) as all
+                CALL {{ with all
+                    unwind all as nodes
+                    with nodes, all
+                    // skip current entry if it's smaller and a subset of any other entry
+                    where none(other in all where other <> nodes and size(other) > size(nodes) and size(apoc.coll.subtract(nodes, other))=0)
+                    return head(nodes) as n, tail(nodes) as similar
+                }}
+                OPTIONAL MATCH (doc:Document)<-[:PART_OF]-(c:Chunk)-[:HAS_ENTITY]->(n)
+                {return_statement}
+                """
+        return_query_duplicate_nodes = """
+                RETURN n {.*, embedding:null, elementId:elementId(n), labels:labels(n)} as e, 
+                [s in similar | s {.id, .description, labels:labels(s), elementId: elementId(s)}] as similar,
+                collect(distinct doc.fileName) as documents, count(distinct c) as chunkConnections
+                ORDER BY e.id ASC
+                """
+        return_query_duplicate_nodes_total = "RETURN COUNT(DISTINCT(n)) as total"
+        
+        param = {"duplicate_score_value": score_value, "duplicate_text_distance" : text_distance}
+        
+        nodes_list = self.execute_query(query_duplicate_nodes.format(return_statement=return_query_duplicate_nodes),param=param)
+        total_nodes = self.execute_query(query_duplicate_nodes.format(return_statement=return_query_duplicate_nodes_total),param=param)
+        return nodes_list, total_nodes[0]
+    
     def get_duplicate_nodes_list(self):
         score_value = float(os.environ.get('DUPLICATE_SCORE_VALUE'))
         text_distance = int(os.environ.get('DUPLICATE_TEXT_DISTANCE'))
@@ -308,7 +397,7 @@ class graphDBdataAccess:
     
     def merge_duplicate_nodes(self,duplicate_nodes_list):
         nodes_list = json.loads(duplicate_nodes_list)
-        print(f'Nodes list to merge {nodes_list}')
+        logging.info(f'Nodes list to merge {nodes_list}')
         query = """
         UNWIND $rows AS row
         CALL { with row

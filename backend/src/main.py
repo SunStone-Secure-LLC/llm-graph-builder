@@ -395,8 +395,8 @@ def processing_chunks(chunkId_chunkDoc_list,graph,uri, userName, password, datab
 
   node_count += len(distinct_nodes)
   rel_count += len(relations)
-  print(f'node count internal func:{node_count}')
-  print(f'relation count internal func:{rel_count}')
+  logging.info(f'node count internal func:{node_count}')
+  logging.info(f'relation count internal func:{rel_count}')
   return node_count,rel_count
 
 def get_source_list_from_graph(uri,userName,password,db_name=None):

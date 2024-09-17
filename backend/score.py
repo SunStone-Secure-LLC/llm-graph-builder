@@ -260,11 +260,13 @@ async def post_processing(uri=Form(None), userName=Form(None), password=Form(Non
         graph = create_graph_database_connection(uri, userName, password, database)
         tasks = set(map(str.strip, json.loads(tasks)))
 
+        # add SIMILAR relationship based on similarity score threshold
         if "update_similarity_graph" in tasks:
             await asyncio.to_thread(update_graph, graph)
             josn_obj = {'api_name': 'post_processing/update_similarity_graph', 'db_url': uri, 'logging_time': formatted_time(datetime.now(timezone.utc))}
             logger.log_struct(josn_obj)
             logging.info(f'Updated KNN Graph')
+        # CREATE FULLTEXT INDEX on Document and Chunk entities
         if "create_fulltext_index" in tasks:
             await asyncio.to_thread(create_fulltext, uri=uri, username=userName, password=password, database=database)
             josn_obj = {'api_name': 'post_processing/create_fulltext_index', 'db_url': uri, 'logging_time': formatted_time(datetime.now(timezone.utc))}
@@ -459,23 +461,50 @@ async def update_extract_status(request:Request, file_name, url, userName, passw
                     break
                 # get the current status of document node
                 graph = create_graph_database_connection(uri, userName, decoded_password, database)
+                if not graph:
+                    logging.error(f'could not instantiate graph: {uri}, {userName}, {decoded_password}, {database}')
+                
                 graphDb_data_Access = graphDBdataAccess(graph)
                 result = graphDb_data_Access.get_current_status_document_node(file_name)
                 if result is not None:
-                    status = json.dumps({'fileName':file_name, 
-                    'status':result[0]['Status'],
-                    'processingTime':result[0]['processingTime'],
-                    'nodeCount':result[0]['nodeCount'],
-                    'relationshipCount':result[0]['relationshipCount'],
-                    'model':result[0]['model'],
-                    'total_chunks':result[0]['total_chunks'],
-                    'total_pages':result[0]['total_pages'],
-                    'fileSize':result[0]['fileSize'],
-                    'processed_chunk':result[0]['processed_chunk'],
-                    'fileSource':result[0]['fileSource']
-                    })
-                else:
-                    status = json.dumps({'fileName':file_name, 'status':'Failed'})
+                    if len(result) > 0:
+                        #logging.log_struct(result)
+
+                        strStatus = ''
+                        strProccTime = ''
+                        strNodeCnt = ''
+                        strRelCnt = ''
+                        strModel = ''
+                        strTotChunk = ''
+                        strTotPgs = ''
+                        strFileSz = ''
+                        strProccChunk = ''
+                        strFileSrc = ''
+
+                        if 'Status' in result[0]: strStatus = result[0]['Status']
+                        if 'processingTime' in result[0]: strProccTime = result[0]['processingTime']
+                        if 'nodeCount' in result[0]: strNodeCnt = result[0]['nodeCount']
+                        if 'relationshipCount' in result[0]: strRelCnt = result[0]['relationshipCount']
+                        if 'model' in result[0]: strModel = result[0]['model']
+                        if 'total_chunks' in result[0]: strTotChunk = result[0]['total_chunks']
+                        if 'total_pages' in result[0]: strTotPgs = result[0]['total_pages']
+                        if 'fileSize' in result[0]: strFileSz = result[0]['fileSize']
+                        if 'processed_chunk' in result[0]: strProccChunk = result[0]['processed_chunk']
+                        if 'fileSource' in result[0]: strFileSrc = result[0]['fileSource']
+
+                        status = json.dumps({'fileName':file_name, 
+                        'status':strStatus,
+                        'processingTime':strProccTime,
+                        'nodeCount':strNodeCnt,
+                        'relationshipCount':strRelCnt,
+                        'model':strModel,
+                        'total_chunks':strTotChunk,
+                        'total_pages':strTotPgs,
+                        'fileSize':strFileSz,
+                        'processed_chunk':strProccChunk,
+                        'fileSource':strFileSrc
+                        })
+                
                 yield status
             except asyncio.CancelledError:
                 logging.info("SSE Connection cancelled")
@@ -520,9 +549,15 @@ async def get_document_status(file_name, url, userName, password, database):
         else:
             uri=url
         graph = create_graph_database_connection(uri, userName, decoded_password, database)
+        if not graph:
+            logging.error(f'ERROR CREATING GRAPH:  {uri} {userName} {database}')
+
         graphDb_data_Access = graphDBdataAccess(graph)
+        logging.info(file_name)
         result = graphDb_data_Access.get_current_status_document_node(file_name)
-        if result is not None:
+        if result is not None and len(result) > 0:
+            logging.log_struct(result)
+
             status = {'fileName':file_name, 
                 'status':result[0]['Status'],
                 'processingTime':result[0]['processingTime'],
@@ -537,6 +572,7 @@ async def get_document_status(file_name, url, userName, password, database):
                 }
         else:
             status = {'fileName':file_name, 'status':'Failed'}
+            return create_api_response('Failed',message="get_current_status_document_node bad result")
         return create_api_response('Success',message="",file_name=status)
     except Exception as e:
         message=f"Unable to get the document status"
@@ -647,9 +683,46 @@ async def merge_duplicate_nodes(uri=Form(), userName=Form(), password=Form(), da
         if graph is not None:
             close_db_connection(graph,"merge_duplicate_nodes")
         gc.collect()
-        
+
+# WIP - get redteam nodes
+@app.post("/get_redteam_nodes")
+async def get_redteam_nodes(uri=Form(), userName=Form(), password=Form(), database=Form()):
+    try:
+        graph = create_graph_database_connection(uri, userName, password, database)
+        graphDb_data_Access = graphDBdataAccess(graph)
+        nodes_list, total_nodes = graphDb_data_Access.get_redteam_nodes_list()
+        return create_api_response('Success',data=nodes_list, message=total_nodes)
+    except Exception as e:
+        job_status = "Failed"
+        message="Unable to get the list of red team nodes"
+        error_message = str(e)
+        logging.exception(f'Exception in getting list of red team nodes:{error_message}')
+        return create_api_response(job_status, message=message, error=error_message)
+    finally:
+        if graph is not None:
+            close_db_connection(graph,"get_redteam_nodes")
+        gc.collect()
+# WIP - link red team nodes
+@app.post("/link_redteam_nodes")
+async def link_redteam_nodes(uri=Form(), userName=Form(), password=Form(), database=Form(),linked_nodes_list=Form()):
+    try:
+        graph = create_graph_database_connection(uri, userName, password, database)
+        graphDb_data_Access = graphDBdataAccess(graph)
+        result = graphDb_data_Access.link_redteam_nodes(linked_nodes_list)
+        return create_api_response('Success',data=result,message="Red Team entities linked successfully")
+    except Exception as e:
+        job_status = "Failed"
+        message="Unable to link red team nodes"
+        error_message = str(e)
+        logging.exception(f'Exception in red team link nodes:{error_message}')
+        return create_api_response(job_status, message=message, error=error_message)
+    finally:
+        if graph is not None:
+            close_db_connection(graph,"link_redteam_nodes")
+        gc.collect()
+
 @app.post("/drop_create_vector_index")
-async def merge_duplicate_nodes(uri=Form(), userName=Form(), password=Form(), database=Form(), is_vector_index_recreate=Form()):
+async def drop_create_vector_index(uri=Form(), userName=Form(), password=Form(), database=Form(), is_vector_index_recreate=Form()):
     try:
         graph = create_graph_database_connection(uri, userName, password, database)
         graphDb_data_Access = graphDBdataAccess(graph)

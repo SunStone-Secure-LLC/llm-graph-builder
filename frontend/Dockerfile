@@ -2,7 +2,7 @@
 FROM node:20 AS build
 
 ARG BACKEND_API_URL="https://backend-byccweobuq-uc.a.run.app"
-ARG REACT_APP_SOURCES=""
+ARG REACT_APP_SOURCES="web,local"
 ARG LLM_MODELS=""
 ARG GOOGLE_CLIENT_ID=""
 ARG BLOOM_URL="https://workspace-preview.neo4j.io/workspace/explore?connectURL={CONNECT_URL}&search=Show+me+a+graph&featureGenAISuggestions=true&featureGenAISuggestionsInternal=true"
@@ -15,7 +15,8 @@ ARG ENV="DEV"
 
 WORKDIR /app
 COPY package.json yarn.lock ./
-RUN yarn add @neo4j-nvl/base @neo4j-nvl/react
+# review https://github.com/neo4j-labs/llm-graph-builder/issues/669#issuecomment-2276075100
+#RUN yarn add @neo4j-nvl/base @neo4j-nvl/react #RAF: temp workaround uncommment later
 RUN yarn install
 COPY . ./
 RUN BACKEND_API_URL=$BACKEND_API_URL \

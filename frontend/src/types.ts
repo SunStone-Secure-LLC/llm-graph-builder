@@ -374,7 +374,7 @@ export interface commonserverresponse {
   error?: string;
   message?: string | orphanTotalNodes;
   file_name?: string;
-  data?: labelsAndTypes | labelsAndTypes[] | uploadData | orphanNodeProps[] | dupNodes[];
+  data?: labelsAndTypes | labelsAndTypes[] | uploadData | orphanNodeProps[] | dupNodes[] | redTeamNodes[];
 }
 export interface dupNodeProps {
   id: string;
@@ -392,6 +392,22 @@ export interface selectedDuplicateNodes {
   firstElementId: string;
   similarElementIds: string[];
 }
+export interface redTeamNodeProps {
+  id: string;
+  elementId: string;
+  labels: string[];
+  embedding?: null | string;
+}
+export interface redTeamNodes {
+  e: redTeamNodeProps;
+  target: redTeamNodeProps[];
+  documents: string[];
+  chunkConnections: number;
+}
+export interface selectedRedTeamNodes {
+  firstElementId: string;
+  targetElementIds: string[];
+}
 export interface ScehmaFromText extends Partial<commonserverresponse> {
   data: labelsAndTypes;
 }
@@ -401,6 +417,9 @@ export interface ServerData extends Partial<commonserverresponse> {
 }
 export interface duplicateNodesData extends Partial<commonserverresponse> {
   data: dupNodes[];
+}
+export interface redTeamNodesData extends Partial<commonserverresponse> {
+  data: redTeamNodes[];
 }
 export interface OrphanNodeResponse extends Partial<commonserverresponse> {
   data: orphanNodeProps[];

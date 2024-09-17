@@ -35,7 +35,9 @@ export default function ConnectionModal({ open, setOpenConnection, setConnection
   const protocols = ['neo4j', 'neo4j+s', 'neo4j+ssc', 'bolt', 'bolt+s', 'bolt+ssc'];
   const [protocol, setProtocol] = useState<string>(initialprotocol ?? 'neo4j+s');
   const [URI, setURI] = useState<string>(initialuri ?? '');
-  const [port, setPort] = useState<string>(initialport ?? '7687');
+  // FIXME: port not needed for Aura hosted neo
+  // const [port, setPort] = useState<string>(initialport ?? '7687');
+  const [port, setPort] = useState<string>(initialport);
   const [database, setDatabase] = useState<string>(initialdb ?? 'neo4j');
   const [username, setUsername] = useState<string>(initialusername ?? 'neo4j');
   const [password, setPassword] = useState<string>('');
@@ -115,7 +117,9 @@ export default function ConnectionModal({ open, setOpenConnection, setConnection
           setUsername(configObject.NEO4J_USERNAME ?? 'neo4j');
           setPassword(configObject.NEO4J_PASSWORD ?? '');
           setDatabase(configObject.NEO4J_DATABASE ?? 'neo4j');
-          setPort(configObject.NEO4J_PORT ?? '7687');
+          // FIXME: hosted aura neo doesnt need port
+          //setPort(configObject.NEO4J_PORT ?? '7687');
+          setPort(configObject.NEO4J_PORT);
         } else {
           setMessage({ type: 'danger', content: 'Please drop a valid file' });
         }
@@ -127,7 +131,9 @@ export default function ConnectionModal({ open, setOpenConnection, setConnection
   };
 
   const submitConnection = async () => {
-    const connectionURI = `${protocol}://${URI}${URI.split(':')[1] ? '' : `:${port}`}`;
+    // FIXME: aura neo doesnt need port
+    // const connectionURI = `${protocol}://${URI}${URI.split(':')[1] ? '' : `:${port}`}`;
+    const connectionURI = `${protocol}://${URI}`;
     setUserCredentials({ uri: connectionURI, userName: username, password: password, database: database, port: port });
     setIsLoading(true);
     const response = await connectAPI(connectionURI, username, password, database);

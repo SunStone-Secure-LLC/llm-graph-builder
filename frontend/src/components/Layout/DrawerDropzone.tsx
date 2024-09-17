@@ -96,6 +96,16 @@ const DrawerDropzone: React.FC<DrawerProps> = ({ isExpanded }) => {
                 {process.env.ENV != 'PROD' ? (
                   <>
                     <Flex gap='6' className='h-full source-container'>
+                      <div className={`outline-dashed imageBg ${process.env.ENV === 'PROD' ? 'w-[245px]' : ''}`}>
+                              <GenericButton openModal={openGenericModal}></GenericButton>
+                              <GenericModal
+                                isOnlyYoutube={isYoutubeOnlyCheck}
+                                isOnlyWikipedia={isWikipediaOnlyCheck}
+                                isOnlyWeb={iswebOnlyCheck}
+                                open={showGenericModal}
+                                closeHandler={closeGenericModal}
+                              ></GenericModal>
+                      </div>
                       {APP_SOURCES != undefined && APP_SOURCES.includes('local') && (
                         <div className='px-6 outline-dashed outline-2 outline-offset-2 outline-gray-100 imageBg'>
                           <DropZone />
