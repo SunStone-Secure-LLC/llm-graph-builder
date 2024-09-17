@@ -1,7 +1,7 @@
 # Step 1: Build the React application
 FROM node:20 AS build
 
-ARG BACKEND_API_URL="http://localhost:8000"
+ARG BACKEND_API_URL="https://backend-byccweobuq-uc.a.run.app"
 ARG REACT_APP_SOURCES=""
 ARG LLM_MODELS=""
 ARG GOOGLE_CLIENT_ID=""

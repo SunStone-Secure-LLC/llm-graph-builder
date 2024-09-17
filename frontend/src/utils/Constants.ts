@@ -31,7 +31,8 @@ export const docChunkEntities = `+[chunks]
 export const APP_SOURCES =
   process.env.REACT_APP_SOURCES !== ''
     ? process.env.REACT_APP_SOURCES?.split(',')
-    : ['gcs', 's3', 'local', 'wiki', 'youtube', 'web'];
+    : ['local', 'web']
+  //['gcs', 's3', 'local', 'wiki', 'youtube', 'web'];
 export const llms =
   process.env?.LLM_MODELS?.trim() != ''
     ? process.env.LLM_MODELS?.split(',')

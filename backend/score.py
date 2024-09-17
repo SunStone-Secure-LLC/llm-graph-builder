@@ -40,6 +40,8 @@ CHUNK_DIR = os.path.join(os.path.dirname(__file__), "chunks")
 MERGED_DIR = os.path.join(os.path.dirname(__file__), "merged_files")
 
 def healthy_condition():
+    logging.info("FastAPI health check")
+
     output = {"healthy": True}
     return output
 
@@ -50,6 +52,8 @@ def sick():
     return False
 
 app = FastAPI()
+#logger.log_struct(josn_obj)
+logging.info("FastAPI initialized")
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,14 +63,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # app.add_middleware(GZipMiddleware, minimum_size=1000)
+logging.info("FastAPI middleware in progress")
 
 is_gemini_enabled = os.environ.get("GEMINI_ENABLED", "False").lower() in ("true", "1", "yes")
 if is_gemini_enabled:
     add_routes(app,ChatVertexAI(), path="/vertexai")
 
 app.add_api_route("/health", health([healthy_condition, healthy]))
+logging.info("FastAPI health route done")
 
 app.add_middleware(SessionMiddleware, secret_key=os.urandom(24))
+logging.info("FastAPI session middleware done")
 
 
 @app.post("/url/scan")
